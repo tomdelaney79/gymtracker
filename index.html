@@ -48,8 +48,10 @@
         .weight-input-container input { padding-right: 35px; }
         .weight-suffix { position: absolute; right: 12px; font-size: 0.9rem; font-weight: bold; color: var(--text-muted); pointer-events: none; }
 
-        .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%; font-size: 0.95rem; transition: background 0.2s; }
+        .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%; font-size: 0.95rem; transition: background 0.2s; margin-bottom: 10px; }
         .btn:hover { background: var(--primary-hover); }
+        .btn-success { background: var(--accent); }
+        .btn-success:hover { background: #059669; }
         .btn:disabled { background: var(--text-muted); cursor: not-allowed; }
         .btn-sec { background: transparent; border: 1px solid var(--border); color: var(--text-color); margin-bottom: 15px; padding: 8px; font-size: 0.85rem; }
         
@@ -65,6 +67,7 @@
         .sync-status { font-size: 0.85rem; text-align: right; color: var(--primary); font-weight: 600; margin-top: -10px; margin-bottom: 10px; }
         .history-item { padding: 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 0.9rem; }
         .history-list { max-height: 180px; overflow-y: auto; }
+        .staged-badge { display: inline-block; background: var(--medal-bg); padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; margin-left: 5px; color: var(--primary); }
     </style>
 </head>
 <body>
@@ -98,10 +101,10 @@
             </div>
 
             <div class="card">
-                <h2>📝 Log Workout Set</h2>
+                <h2>📝 Log Workout Set <span id="stagedCount" class="staged-badge">0 Stacked</span></h2>
                 <div class="sync-status" id="syncIndicator">Connecting to cloud system...</div>
                 
-                <form id="logForm">
+                <form id="logForm" onsubmit="event.preventDefault();">
                     <div class="form-group">
                         <label>Target Area</label>
                         <select id="areaSelect" required disabled>
@@ -130,7 +133,11 @@
                     </div>
 
                     <button type="button" class="btn btn-sec" id="addSetBtn" onclick="appendExtraSetRow()" disabled>+ Add Extra Drop/Warmup Set</button>
-                    <button type="submit" class="btn" id="submitBtn" disabled>🚀 Save & Sync Session</button>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 10px;">
+                        <button type="button" class="btn" id="stageExerciseBtn" onclick="stageCurrentExercise()" disabled>💾 Save Exercise to Session Stack</button>
+                        <button type="button" class="btn btn-success" id="submitBtn" onclick="commitFullSessionToCloud()" disabled>🚀 Finalize & Sync Complete Session</button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -167,7 +174,6 @@
 </div>
 
 <script>
-    // Your verified live Google Apps Script Deployment URL
     const GOOGLE_SHEET_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzxKTVp-lPHkUtfpC-xR9VNI9ymsvYp9zSqwrrMRIp_WXjjW_nv4WKuNdhnUYxinoDbpw/exec";
 
     const muscleMatrix = {
@@ -206,6 +212,7 @@
     };
 
     let globalCloudLogsCache = [];
+    let sessionStagingStack = []; 
     let currentTheme = 'light';
     let globalChartInstance = null;
     let timerDuration = 60;
@@ -217,20 +224,19 @@
     const containerSets = document.getElementById('dynamicSetsContainer');
     const chartFilterSelect = document.getElementById('chartFilterSelect');
     const syncIndicator = document.getElementById('syncIndicator');
+    const stageExerciseBtn = document.getElementById('stageExerciseBtn');
 
     document.getElementById('themeToggle').addEventListener('click', () => {
         currentTheme = currentTheme === 'light' ? 'dark' : 'light';
         document.documentElement.setAttribute('data-theme', currentTheme);
     });
 
-    // Cloud Data Sync Engine
     async function pullCloudRecords() {
         try {
             syncIndicator.innerText = "⏳ Fetching history directly from Google Sheet...";
             const res = await fetch(GOOGLE_SHEET_SCRIPT_URL);
             globalCloudLogsCache = await res.json();
             
-            // Enable controls once online state confirmed
             areaSelect.disabled = false;
             document.getElementById('submitBtn').disabled = false;
             document.getElementById('addSetBtn').disabled = false;
@@ -241,14 +247,20 @@
             populateAnalyticsDropdown();
         } catch (e) {
             console.error(e);
-            syncIndicator.innerText = "❌ Network Sync Failed. Verify script parameters or internet connection.";
+            syncIndicator.innerText = "❌ Network Sync Failed. Check Web App configuration.";
         }
     }
 
     areaSelect.addEventListener('change', () => {
         const area = areaSelect.value;
         exerciseSelect.innerHTML = '<option value="">-- Choose Exercise --</option>';
-        if(!area) { exerciseSelect.disabled = true; return; }
+        containerSets.innerHTML = ''; 
+        stageExerciseBtn.disabled = true;
+
+        if(!area) { 
+            exerciseSelect.disabled = true; 
+            return; 
+        }
         
         exerciseSelect.disabled = false;
         muscleMatrix[area].forEach(ex => {
@@ -262,11 +274,15 @@
     exerciseSelect.addEventListener('change', () => {
         const area = areaSelect.value;
         const exName = exerciseSelect.value;
-        if(!exName) return;
-
-        const spec = muscleMatrix[area].find(e => e.name === exName);
         
-        // Pull latest recorded historical metric
+        if(!exName) {
+            containerSets.innerHTML = ''; 
+            stageExerciseBtn.disabled = true;
+            return;
+        }
+
+        stageExerciseBtn.disabled = false;
+        const spec = muscleMatrix[area].find(e => e.name === exName);
         const historic = globalCloudLogsCache.filter(l => l.exercise === exName);
         let suggestedWeight = spec.weight;
 
@@ -297,10 +313,101 @@
     }
 
     function appendExtraSetRow() {
+        if(!exerciseSelect.value) return;
         const nextNum = containerSets.querySelectorAll('.set-row').length + 1;
         const fallbackWeightInput = containerSets.querySelector('.input-weight');
         const fallbackWeight = fallbackWeightInput ? fallbackWeightInput.value : "";
         injectSetInputRow(nextNum, fallbackWeight, "Drop Set");
+    }
+
+    function stageCurrentExercise() {
+        const area = areaSelect.value;
+        const exercise = exerciseSelect.value;
+        
+        if(!area || !exercise) return;
+
+        const weightInputs = containerSets.querySelectorAll('.input-weight');
+        const repInputs = containerSets.querySelectorAll('.input-reps');
+        
+        let setsArray = [];
+        let valid = true;
+
+        weightInputs.forEach((input, index) => {
+            if(!input.value || !repInputs[index].value) {
+                valid = false;
+                input.reportValidity();
+                repInputs[index].reportValidity();
+            }
+            setsArray.push({
+                setNum: index + 1,
+                weight: input.value,
+                reps: repInputs[index].value
+            });
+        });
+
+        if(!valid) return;
+
+        const spec = muscleMatrix[area].find(e => e.name === exercise);
+        const targetReps = spec ? spec.reps : "10-12";
+
+        // Stack locally in the active runtime variable
+        sessionStagingStack.push({
+            area: area,
+            exercise: exercise,
+            targetReps: targetReps,
+            sets: setsArray
+        });
+
+        document.getElementById('stagedCount').innerText = `${sessionStagingStack.length} Stacked`;
+        
+        // Reset row input layout completely back to blank status
+        exerciseSelect.selectedIndex = 0;
+        containerSets.innerHTML = '';
+        stageExerciseBtn.disabled = true;
+        syncIndicator.innerText = `⏳ Staged "${exercise}". Ready to load next movement or push complete block.`;
+    }
+
+    async function commitFullSessionToCloud() {
+        if(sessionStagingStack.length === 0) {
+            syncIndicator.innerText = "⚠️ Staging stack empty. Save individual exercises to stack first!";
+            return;
+        }
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        syncIndicator.innerText = `⏳ Dispatching multi-line deployment stack to cloud engine...`;
+        
+        try {
+            // Process sequential network dispatches for the bundled routine
+            for (let stagedRecord of sessionStagingStack) {
+                await fetch(GOOGLE_SHEET_SCRIPT_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        date: todayStr,
+                        area: stagedRecord.area,
+                        exercise: stagedRecord.exercise,
+                        targetReps: stagedRecord.targetReps,
+                        sets: stagedRecord.sets
+                    })
+                });
+            }
+
+            syncIndicator.innerText = "✅ Complete session synchronized successfully!";
+            
+            // Wipe runtime structural buffers
+            sessionStagingStack = [];
+            document.getElementById('stagedCount').innerText = "0 Stacked";
+            areaSelect.selectedIndex = 0;
+            exerciseSelect.innerHTML = '<option value="">-- Choose Area First --</option>';
+            exerciseSelect.disabled = true;
+            containerSets.innerHTML = '';
+            
+            await pullCloudRecords();
+        } catch(err) {
+            console.error(err);
+            syncIndicator.innerText = "❌ Write transmission failed. Verify endpoint credentials.";
+        }
     }
 
     function toggleTimer() {
@@ -400,57 +507,9 @@
         `;
     }
 
-    document.getElementById('logForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const area = areaSelect.value;
-        const exercise = exerciseSelect.value;
-        const todayStr = new Date().toISOString().split('T')[0];
-
-        const weights = Array.from(containerSets.querySelectorAll('.input-weight')).map(i => i.value);
-        const reps = Array.from(containerSets.querySelectorAll('.input-reps')).map(i => i.value);
-        
-        const spec = muscleMatrix[area].find(e => e.name === exercise);
-        const targetReps = spec ? spec.reps : "10-12";
-
-        let submissionSets = [];
-        for(let i=0; i < weights.length; i++) {
-            submissionSets.push({ setNum: i + 1, weight: weights[i], reps: reps[i] });
-        }
-
-        syncIndicator.innerText = "⏳ Saving directly to Google Sheet pipeline...";
-        
-        try {
-            await fetch(GOOGLE_SHEET_SCRIPT_URL, {
-                method: "POST",
-                mode: "no-cors",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    date: todayStr,
-                    area: area,
-                    exercise: exercise,
-                    targetReps: targetReps,
-                    sets: submissionSets
-                })
-            });
-
-            syncIndicator.innerText = "✅ Successfully saved directly to cloud!";
-            
-            document.getElementById('logForm').reset();
-            exerciseSelect.disabled = true;
-            containerSets.innerHTML = '';
-            
-            await pullCloudRecords();
-        } catch(err) {
-            console.error(err);
-            syncIndicator.innerText = "❌ Write Failed. Check internet or Web App deployment settings.";
-        }
-    });
-
     function refreshLiveLedgerDataView() {
         const todayStr = new Date().toISOString().split('T')[0];
         const ledger = document.getElementById('todayLedger');
-        
         const todayLogs = globalCloudLogsCache.filter(l => l.date === todayStr);
 
         if(todayLogs.length === 0) {
