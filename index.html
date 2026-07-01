@@ -175,7 +175,7 @@
 
 <script>
     // Configured secure Apps Script target endpoint
-    const GOOGLE_SHEET_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGrCgTjhulnnIt-ysBhJ_kwBfus7oRsfGEukBvtj5H8UtkC3bOupPVBbANGDZLb83bVQ/exec";
+    const GOOGLE_SHEET_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzyGGmadiOevnv8--XKso4xzYws3O7E-DufjZowgg5d7Ex0-9h5HTfLDF1OGzMQeLRAvg/exec";
 
     const muscleMatrix = {
         "Shoulders": [
@@ -233,25 +233,30 @@
     });
 
     async function pullCloudRecords() {
-        try {
-            syncIndicator.innerText = "⏳ Fetching metrics directly from Google Sheet...";
-            const res = await fetch(GOOGLE_SHEET_SCRIPT_URL);
-            globalCloudLogsCache = await res.json();
-            
-            areaSelect.disabled = false;
-            document.getElementById('submitBtn').disabled = false;
-            document.getElementById('addSetBtn').disabled = false;
-            syncIndicator.innerText = "☁️ Connected live directly to Google Sheet";
-            
-            refreshLiveLedgerDataView();
-            calculateWeeklyAnalytics();
-            populateAnalyticsDropdown();
-        } catch (e) {
-            console.error(e);
-            syncIndicator.innerText = "❌ Connection stalled. Check deployment configuration.";
-        }
+    try {
+        syncIndicator.innerText = "⏳ Fetching metrics directly from Google Sheet...";
+        
+        // Added redirect configuration to clear the CORS block
+        const res = await fetch(GOOGLE_SHEET_SCRIPT_URL, {
+            method: "GET",
+            redirect: "follow" 
+        });
+        
+        globalCloudLogsCache = await res.json();
+        
+        areaSelect.disabled = false;
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('addSetBtn').disabled = false;
+        syncIndicator.innerText = "☁️ Connected live directly to Google Sheet";
+        
+        refreshLiveLedgerDataView();
+        calculateWeeklyAnalytics();
+        populateAnalyticsDropdown();
+    } catch (e) {
+        console.error(e);
+        syncIndicator.innerText = "❌ Connection stalled. Check deployment configuration.";
     }
-
+}
     areaSelect.addEventListener('change', () => {
         const area = areaSelect.value;
         exerciseSelect.innerHTML = '<option value="">-- Choose Exercise --</option>';
