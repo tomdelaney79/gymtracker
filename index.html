@@ -90,7 +90,7 @@
         .chip { background: var(--bg-color); border: 1px solid var(--border); color: var(--text-color); padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; transition: all 0.1s; }
         .chip:hover { border-color: var(--primary); background: var(--primary); color: white;}
 
-        .history-badge { background: var(--highlight); color: var(--highlight-text); padding: 8px 12px; border-radius: 8px; font-size: 0.875rem; margin-bottom: 15px; font-weight: 500; display: none; border: 1px solid var(--border); }
+        .history-badge { background: var(--highlight); color: var(--highlight-text); padding: 8px 12px; border-radius: 8px; font-size: 0.875rem; margin-bottom: 15px; font-weight: 500; display: none; border: 1px solid var(--border); line-height: 1.4; }
         
         .set-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
         
@@ -183,12 +183,12 @@
                     <div id="setsContainer">
                         <div class="set-row">
                             <span style="font-size:0.85rem; width:40px;">Set 1:</span>
-                            <input type="number" placeholder="Weight (kg)" class="set-weight" required step="any">
+                            <input type="text" placeholder="Weight" class="set-weight" required>
                             <input type="number" placeholder="Reps" class="set-reps" required>
                         </div>
                     </div>
                     
-                    <button type="button" class="btn btn-secondary" id="addSetBtn">+ Add Custom Set</button>
+                    <button type="button" class="btn btn-secondary" id="addSetBtn">+ Add Extra Set</button>
                     <button type="submit" class="btn">Save Workout</button>
                 </form>
             </div>
@@ -209,14 +209,42 @@
 </div>
 
 <script>
-    // Configuration Data Matrix
+    // Configuration Data Matrix with explicit default parameters mapping targets
     const exercisesMap = {
-        "Shoulders": ["Overhead Barbell Press", "Dumbbell Shoulder Press", "Lateral Raises", "Front Raises", "Rear Delt Flyes"],
-        "Chest": ["Chest Press Dumbbell", "Chest Press Barbell", "Incline Dumbbell Press", "Cable Crossover", "Chest Dips"],
-        "Arms": ["Bicep Curl Dumbbell", "Bicep Curl Barbell", "Tricep Pushdowns", "Hammer Curls", "Skull Crushers"],
-        "Back": ["Barbell Rows", "Dumbbell Single-Arm Row", "Lat Pulldowns", "Pull-ups", "Deadlifts"],
-        "Legs": ["Barbell Squats", "Leg Press", "Romanian Deadlifts", "Leg Curls", "Calf Raises"],
-        "Ab Challenge": ["Plank (Seconds)", "Hanging Leg Raises", "Ab Wheel Rollouts", "Cable Crunches", "Russian Twists"]
+        "Shoulders": [
+            { name: "Machine Shoulder Press (Plate/Selectorized)", defaultWeight: "60", defaultSets: 4, targetReps: "6-10" },
+            { name: "Seated Dumbbell Shoulder Press", defaultWeight: "16x2", defaultSets: 3, targetReps: "8-12" },
+            { name: "Dumbbell Lateral Raise", defaultWeight: "5.9", defaultSets: 3, targetReps: "12-15" },
+            { name: "Rear Delt Fly Machine (Reverse Pec Deck)", defaultWeight: "73", defaultSets: 4, targetReps: "12-15" },
+            { name: "Face Pull (Cable + Rope)", defaultWeight: "67.5", defaultSets: 3, targetReps: "12-15" },
+            { name: "Front Raise (Plate or Dumbbells)", defaultWeight: "15", defaultSets: 3, targetReps: "10-12" },
+            { name: "Chest Press (Converging Machine)", defaultWeight: "64", defaultSets: 3, targetReps: "10-12" }
+        ],
+        "Chest": [
+            { name: "Bench Press (Barbell + Bench)", defaultWeight: "70", defaultSets: 3, targetReps: "8-10" },
+            { name: "Dumbbell Pullover", defaultWeight: "22", defaultSets: 3, targetReps: "8-12" },
+            { name: "Incline Dumbbell Press", defaultWeight: "16x2", defaultSets: 3, targetReps: "8-12" },
+            { name: "Chest Press Machine (Converging)", defaultWeight: "66", defaultSets: 3, targetReps: "8-12" },
+            { name: "Pec Fly Machine", defaultWeight: "100", defaultSets: 4, targetReps: "8-12" },
+            { name: "Triceps Pushdown Machine", defaultWeight: "64", defaultSets: 3, targetReps: "10-12" },
+            { name: "Incline Bench (Barbell + Bench)", defaultWeight: "40", defaultSets: 3, targetReps: "8-10" }
+        ],
+        "Arms": [
+            { name: "Bicep Curl Dumbbell", defaultWeight: "", defaultSets: 3, targetReps: "10-12" },
+            { name: "Tricep Pushdowns", defaultWeight: "", defaultSets: 3, targetReps: "10-12" }
+        ],
+        "Back": [
+            { name: "Lat Pulldowns", defaultWeight: "", defaultSets: 3, targetReps: "10-12" },
+            { name: "Seated Cable Rows", defaultWeight: "", defaultSets: 3, targetReps: "10-12" }
+        ],
+        "Legs": [
+            { name: "Barbell Squats", defaultWeight: "", defaultSets: 3, targetReps: "8-10" },
+            { name: "Leg Press", defaultWeight: "", defaultSets: 3, targetReps: "10-12" }
+        ],
+        "Ab Challenge": [
+            { name: "Plank (Seconds)", defaultWeight: "BW", defaultSets: 3, targetReps: "Hold" },
+            { name: "Hanging Leg Raises", defaultWeight: "BW", defaultSets: 3, targetReps: "12-15" }
+        ]
     };
 
     // Initialize Dexie Storage Model
@@ -247,7 +275,7 @@
         db.settings.put({key: 'theme', value: currentTheme});
     });
 
-    // Dropdown updates
+    // Handle Dropdown Updates
     muscleAreaSelect.addEventListener('change', (e) => {
         const selectedArea = e.target.value;
         exerciseSelect.innerHTML = '<option value="">-- Choose Exercise --</option>';
@@ -257,8 +285,8 @@
             exerciseSelect.disabled = false;
             exercisesMap[selectedArea].forEach(ex => {
                 const opt = document.createElement('option');
-                opt.value = ex;
-                opt.textContent = ex;
+                opt.value = ex.name;
+                opt.textContent = ex.name;
                 exerciseSelect.appendChild(opt);
             });
         } else {
@@ -266,45 +294,67 @@
         }
     });
 
-    // Handle Historical Weight Lookups
+    // Handle Exercise Change: Auto-build lines and load baseline weight configurations
     exerciseSelect.addEventListener('change', async (e) => {
-        const currentExercise = e.target.value;
-        if (!currentExercise) {
+        const currentExerciseName = e.target.value;
+        if (!currentExerciseName) {
             lastRecordedBox.style.display = 'none';
             return;
         }
 
-        const pastLogs = await db.workouts.where('exercise').equals(currentExercise).reverse().toArray();
+        const area = muscleAreaSelect.value;
+        const exMeta = exercisesMap[area].find(item => item.name === currentExerciseName);
+        
+        // Default fallbacks if structural config metadata is missing
+        const targetLinesCount = exMeta ? exMeta.defaultSets : 3;
+        const baseWeight = exMeta ? exMeta.defaultWeight : "";
+        const targetRepsText = exMeta ? exMeta.targetReps : "8-12";
+
+        // Step 1: Auto-generate the correct structural lines
+        generateLinesLayout(targetLinesCount);
+
+        // Step 2: Query database records to display historical performance logs
+        const pastLogs = await db.workouts.where('exercise').equals(currentExerciseName).reverse().toArray();
         
         if (pastLogs.length > 0) {
             const lastLog = pastLogs[0];
             const setString = lastLog.sets.map((s, i) => `S${i+1}: ${s.weight}kg x ${s.reps}`).join(' | ');
-            lastRecordedBox.innerHTML = `⏮️ <strong>Last Performance (${lastLog.date}):</strong><br>${setString}`;
+            lastRecordedBox.innerHTML = `⏮️ <strong>Last Performance (${lastLog.date}):</strong><br>${setString}<br><span style="font-size:0.8rem; color:var(--text-muted)">Target Window: ${targetRepsText} Reps</span>`;
             lastRecordedBox.style.display = 'block';
 
-            // Auto-fill target inputs using preceding data sets
+            // Auto-fill active configuration inputs using history metrics
             const weightInputs = document.querySelectorAll('.set-weight');
             lastLog.sets.forEach((set, i) => {
                 if(weightInputs[i]) weightInputs[i].value = set.weight;
             });
         } else {
-            lastRecordedBox.innerHTML = `ℹ️ No previous log found for this exercise.`;
+            // Apply standard design defaults configuration base values if history is empty
+            lastRecordedBox.innerHTML = `📋 <strong>Routine Guide Baseline:</strong> Recommended ${targetLinesCount} Sets x ${targetRepsText} Reps.`;
             lastRecordedBox.style.display = 'block';
+
+            if(baseWeight) {
+                document.querySelectorAll('.set-weight').forEach(input => input.value = baseWeight);
+            }
         }
     });
 
-    function setPresetSets(num) {
+    // Helper layout builder to structure input rows dynamically
+    function generateLinesLayout(num) {
         setsContainer.innerHTML = '';
         for (let i = 1; i <= num; i++) {
             const setRow = document.createElement('div');
             setRow.className = 'set-row';
             setRow.innerHTML = `
                 <span style="font-size:0.85rem; width:40px;">Set ${i}:</span>
-                <input type="number" placeholder="Weight (kg)" class="set-weight" required step="any">
+                <input type="text" placeholder="Weight" class="set-weight" required>
                 <input type="number" placeholder="Reps" class="set-reps" required>
             `;
             setsContainer.appendChild(setRow);
         }
+    }
+
+    function setPresetSets(num) {
+        generateLinesLayout(num);
         exerciseSelect.dispatchEvent(new Event('change'));
     }
 
@@ -318,7 +368,7 @@
         setRow.className = 'set-row';
         setRow.innerHTML = `
             <span style="font-size:0.85rem; width:40px;">Set ${nextIdx}:</span>
-            <input type="number" placeholder="Weight (kg)" class="set-weight" required step="any">
+            <input type="text" placeholder="Weight" class="set-weight" required>
             <input type="number" placeholder="Reps" class="set-reps" required>
         `;
         setsContainer.appendChild(setRow);
@@ -350,7 +400,7 @@
         workoutForm.reset();
         exerciseSelect.disabled = true;
         lastRecordedBox.style.display = 'none';
-        setPresetSets(1);
+        generateLinesLayout(1);
         
         updateUI();
     });
@@ -419,7 +469,7 @@
         dayLogs.forEach(log => {
             const item = document.createElement('div');
             item.className = 'history-item';
-            const setDetails = log.sets.map((s, i) => `S${i+1}: ${s.weight}kg x ${s.reps}`).join(' | ');
+            const setDetails = log.sets.map((s, i) => `S${i+1}: ${s.weight} x ${s.reps}`).join(' | ');
             
             item.innerHTML = `
                 <div>
