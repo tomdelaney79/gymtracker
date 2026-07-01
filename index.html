@@ -74,7 +74,7 @@
 
 <div class="container">
     <header>
-        <h1>⚡ Gym Analytics Dashboard</h1>
+        <h1>⚡ Power Analytics Dashboard</h1>
         <button class="theme-toggle" id="themeToggle">🌓 Mode</button>
     </header>
 
@@ -174,8 +174,8 @@
 </div>
 
 <script>
-    // Configured secure Apps Script target endpoint
-    const GOOGLE_SHEET_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzyGGmadiOevnv8--XKso4xzYws3O7E-DufjZowgg5d7Ex0-9h5HTfLDF1OGzMQeLRAvg/exec";
+    // Paste your fresh Web App deployment link inside this string variable
+    const GOOGLE_SHEET_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGrCgTjhulnnIt-ysBhJ_kwBfus7oRsfGEukBvtj5H8UtkC3bOupPVBbANGDZLb83bVQ/exec";
 
     const muscleMatrix = {
         "Shoulders": [
@@ -233,30 +233,31 @@
     });
 
     async function pullCloudRecords() {
-    try {
-        syncIndicator.innerText = "⏳ Fetching metrics directly from Google Sheet...";
-        
-        // Added redirect configuration to clear the CORS block
-        const res = await fetch(GOOGLE_SHEET_SCRIPT_URL, {
-            method: "GET",
-            redirect: "follow" 
-        });
-        
-        globalCloudLogsCache = await res.json();
-        
-        areaSelect.disabled = false;
-        document.getElementById('submitBtn').disabled = false;
-        document.getElementById('addSetBtn').disabled = false;
-        syncIndicator.innerText = "☁️ Connected live directly to Google Sheet";
-        
-        refreshLiveLedgerDataView();
-        calculateWeeklyAnalytics();
-        populateAnalyticsDropdown();
-    } catch (e) {
-        console.error(e);
-        syncIndicator.innerText = "❌ Connection stalled. Check deployment configuration.";
+        try {
+            syncIndicator.innerText = "⏳ Fetching metrics directly from Google Sheet...";
+            
+            // Clean text fetch configuration completely clears the browser CORS layout block
+            const res = await fetch(GOOGLE_SHEET_SCRIPT_URL, {
+                method: "GET",
+                mode: "cors",
+                credentials: "omit"
+            });
+            globalCloudLogsCache = await res.json();
+            
+            areaSelect.disabled = false;
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('addSetBtn').disabled = false;
+            syncIndicator.innerText = "☁️ Connected live directly to Google Sheet";
+            
+            refreshLiveLedgerDataView();
+            calculateWeeklyAnalytics();
+            populateAnalyticsDropdown();
+        } catch (e) {
+            console.error(e);
+            syncIndicator.innerText = "❌ Connection stalled. Check deployment configuration.";
+        }
     }
-}
+
     areaSelect.addEventListener('change', () => {
         const area = areaSelect.value;
         exerciseSelect.innerHTML = '<option value="">-- Choose Exercise --</option>';
@@ -382,9 +383,10 @@
         
         try {
             for (let stagedRecord of sessionStagingStack) {
+                // Using text/plain forces browsers to bypass CORS pre-flight inspections
                 await fetch(GOOGLE_SHEET_SCRIPT_URL, {
                     method: "POST",
-                    headers: { "Content-Type": "text/plain;charset=utf-8" }, 
+                    headers: { "Content-Type": "text/plain" }, 
                     body: JSON.stringify({
                         date: todayStr,
                         area: stagedRecord.area,
