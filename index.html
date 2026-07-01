@@ -3,216 +3,360 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gym Tracker</title>
+    <title>Advanced Gym Tracker & PT Dashboard</title>
+    <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.js"></script>
     <style>
         :root {
-            --primary: #2563eb;
-            --background: #f8fafc;
-            --surface: #ffffff;
-            --text: #1e293b;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-color: #0f172a;
+            --text-muted: #64748b;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
             --border: #e2e8f0;
+            --accent: #10b981;
+            --danger: #ef4444;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #3b82f6;
+            --primary-hover: #60a5fa;
+            --border: #334155;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--background);
-            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             margin: 0;
             padding: 20px;
-            display: flex;
-            justify-content: center;
+            transition: background 0.3s, color 0.3s;
         }
 
         .container {
-            width: 100%;
-            max-width: 500px;
+            max-width: 800px;
+            margin: 0 auto;
         }
 
-        h1 {
-            text-align: center;
-            color: var(--primary);
-            margin-bottom: 30px;
-        }
-
-        .card {
-            background: var(--surface);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-            border: 1px solid var(--border);
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 1rem;
-        }
-
-        button {
-            width: 100%;
-            padding: 12px;
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        button:hover {
-            background-color: #1d4ed8;
-        }
-
-        .workout-item {
+        header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px;
-            border-bottom: 1px solid var(--border);
+            margin-bottom: 30px;
         }
 
-        .workout-item:last-child {
-            border-bottom: none;
-        }
-
-        .workout-info .exercise {
-            font-weight: 600;
-        }
-
-        .workout-info .details {
-            font-size: 0.85rem;
-            color: #64748b;
-            margin-top: 2px;
-        }
-
-        .delete-btn {
-            background: #ef4444;
-            color: white;
-            border: none;
-            padding: 6px 10px;
-            border-radius: 4px;
+        button.theme-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 8px;
+            color: var(--text-color);
             cursor: pointer;
-            font-size: 0.8rem;
-            width: auto;
         }
 
-        .delete-btn:hover {
-            background: #dc2626;
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
         }
 
-        .empty-state {
-            text-align: center;
-            color: #64748b;
-            font-style: italic;
+        @media(min-width: 768px) {
+            .grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
             padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
+
+        h2 { margin-top: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 8px;}
+
+        /* Form styling */
+        .form-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 4px; font-size: 0.875rem; font-weight: 500; }
+        input, select { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text-color); box-sizing: border-box; }
+        
+        .set-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
+        
+        .btn { background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; width: 100%; text-align: center;}
+        .btn:hover { background: var(--primary-hover); }
+        .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text-color); margin-bottom: 10px;}
+
+        /* PT Tracker Counter */
+        .pt-tracker { display: flex; justify-content: space-between; align-items: center; }
+        .pt-badge { background: var(--accent); color: white; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 1.1rem; }
+        .counter-controls { display: flex; gap: 8px; }
+        .btn-sm { width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+
+        /* Calendar Styling */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; margin-top: 10px;}
+        .cal-header { font-weight: bold; font-size: 0.75rem; color: var(--text-muted); }
+        .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 0.875rem; border-radius: 6px; cursor: pointer; border: 1px solid transparent; }
+        .cal-day:hover { background: var(--border); }
+        .cal-day.has-workout { background: rgba(59, 130, 246, 0.2); border-color: var(--primary); font-weight: bold; }
+        .cal-day.active { background: var(--primary); color: white; }
+
+        /* Log History List */
+        .history-list { margin-top: 15px; max-height: 300px; overflow-y: auto; }
+        .history-item { padding: 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .history-item:last-child { border-bottom: none; }
+        .del-item { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 0.875rem; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>🏋️‍♂️ Gym Tracker</h1>
-        
-        <div class="card">
-            <form id="workout-form">
-                <div class="form-group">
-                    <label for="exercise">Exercise Name</label>
-                    <input type="text" id="exercise" placeholder="e.g., Bench Press" required>
+<div class="container">
+    <header>
+        <h1>🏋️‍♂️ Workout Dashboard</h1>
+        <button class="theme-toggle" id="themeToggle">🌓 Mode</button>
+    </header>
+
+    <div class="grid">
+        <div class="space-y">
+            <div class="card" style="margin-bottom: 20px;">
+                <h2>🎯 Personal Training Block</h2>
+                <div class="pt-tracker">
+                    <div>
+                        <span class="pt-badge" id="ptCount">0 / 12</span>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top:4px;">Sessions Completed</div>
+                    </div>
+                    <div class="counter-controls">
+                        <button class="btn btn-secondary btn-sm" onclick="adjustPT(-1)">-</button>
+                        <button class="btn btn-sm" style="background:var(--accent)" onclick="adjustPT(1)">+</button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="weight">Weight (kg/lbs)</label>
-                    <input type="number" id="weight" placeholder="e.g., 80" required>
-                </div>
-                <div class="form-group">
-                    <label for="reps">Reps</label>
-                    <input type="number" id="reps" placeholder="e.g., 10" required>
-                </div>
-                <button type="submit">Log Workout</button>
-            </form>
+            </div>
+
+            <div class="card">
+                <h2>📝 Log Exercise</h2>
+                <form id="workoutForm">
+                    <div class="form-group">
+                        <label for="exerciseName">Exercise</label>
+                        <input type="text" id="exerciseName" placeholder="e.g., Squats, Bench Press" required>
+                    </div>
+                    
+                    <label>Sets Configuration</label>
+                    <div id="setsContainer">
+                        <div class="set-row">
+                            <span style="font-size:0.85rem; width:40px;">Set 1:</span>
+                            <input type="number" placeholder="Weight" class="set-weight" required>
+                            <input type="number" placeholder="Reps" class="set-reps" required>
+                        </div>
+                    </div>
+                    
+                    <button type="button" class="btn btn-secondary" id="addSetBtn">+ Add Set</button>
+                    <button type="submit" class="btn">Save Workout</button>
+                </form>
+            </div>
         </div>
 
-        <h2>Workout History</h2>
-        <div class="card" id="history-card">
-            <div id="workout-list"></div>
+        <div>
+            <div class="card" style="margin-bottom: 20px;">
+                <h2 id="calendarMonth">📅 Month</h2>
+                <div class="calendar-grid" id="calendarGrid"></div>
+            </div>
+
+            <div class="card">
+                <h2>📋 Workouts for <span id="selectedDateText">Today</span></h2>
+                <div class="history-list" id="historyList"></div>
+            </div>
         </div>
     </div>
+</div>
 
-    <script>
-        // DOM Elements
-        const workoutForm = document.getElementById('workout-form');
-        const workoutList = document.getElementById('workout-list');
+<script>
+    // Initialize Database via Dexie (Persistent local storage)
+    const db = new Dexie("GymTrackerDB");
+    db.version(1).stores({
+        workouts: '++id, date, exercise, sets',
+        settings: 'key, value'
+    });
 
-        // Load workouts from LocalStorage
-        let workouts = JSON.parse(localStorage.getItem('workouts')) || [];
+    // App State Variables
+    let currentTheme = 'light';
+    let ptSessions = 0;
+    let selectedDate = new Date().toISOString().split('T')[0];
+    const currentMonthDate = new Date();
 
-        // Function to render workouts to the screen
-        function renderWorkouts() {
-            workoutList.innerHTML = '';
+    // DOM Elements
+    const themeToggle = document.getElementById('themeToggle');
+    const workoutForm = document.getElementById('workoutForm');
+    const setsContainer = document.getElementById('setsContainer');
+    const addSetBtn = document.getElementById('addSetBtn');
+    const historyList = document.getElementById('historyList');
+    const selectedDateText = document.getElementById('selectedDateText');
 
-            if (workouts.length === 0) {
-                workoutList.innerHTML = '<div class="empty-state">No workouts logged yet. Get lifting!</div>';
-                return;
-            }
+    // UI: Dark/Light Theme Switching
+    themeToggle.addEventListener('click', () => {
+        currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        db.settings.put({key: 'theme', value: currentTheme});
+    });
 
-            workouts.forEach((workout, index) => {
-                const item = document.createElement('div');
-                item.className = 'workout-item';
-                item.innerHTML = `
-                    <div class="workout-info">
-                        <div class="exercise">${workout.exercise}</div>
-                        <div class="details">${workout.weight}kg × ${workout.reps} reps</div>
-                    </div>
-                    <button class="delete-btn" onclick="deleteWorkout(${index})">Delete</button>
-                `;
-                workoutList.appendChild(item);
-            });
-        }
+    // UI: Multi-set Generator
+    addSetBtn.addEventListener('click', () => {
+        const setCode = setsContainer.children.length + 1;
+        const setRow = document.createElement('div');
+        setRow.className = 'set-row';
+        setRow.innerHTML = `
+            <span style="font-size:0.85rem; width:40px;">Set ${setCode}:</span>
+            <input type="number" placeholder="Weight" class="set-weight" required>
+            <input type="number" placeholder="Reps" class="set-reps" required>
+        `;
+        setsContainer.appendChild(setRow);
+    });
 
-        // Add a workout
-        workoutForm.addEventListener('submit', (e) => {
-            e.preventDefault();
+    // Data: Adjust PT Counter (Max 12)
+    async function adjustPT(amount) {
+        ptSessions = Math.max(0, Math.min(12, ptSessions + amount));
+        document.getElementById('ptCount').innerText = `${ptSessions} / 12`;
+        await db.settings.put({key: 'ptSessions', value: ptSessions});
+    }
 
-            const exercise = document.getElementById('exercise').value;
-            const weight = document.getElementById('weight').value;
-            const reps = document.getElementById('reps').value;
+    // Form submission processing
+    workoutForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const exercise = document.getElementById('exerciseName').value;
+        const weights = Array.from(document.querySelectorAll('.set-weight')).map(el => el.value);
+        const reps = Array.from(document.querySelectorAll('.set-reps')).map(el => el.value);
+        
+        const sets = weights.map((w, i) => ({ weight: w, reps: reps[i] }));
 
-            const newWorkout = { exercise, weight, reps };
-            workouts.push(newWorkout);
-
-            // Save to local storage
-            localStorage.setItem('workouts', JSON.stringify(workouts));
-
-            // Reset form and refresh list
-            workoutForm.reset();
-            renderWorkouts();
+        await db.workouts.add({
+            date: selectedDate,
+            exercise: exercise,
+            sets: sets
         });
 
-        // Delete a workout
-        function deleteWorkout(index) {
-            workouts.splice(index, 1);
-            localStorage.setItem('workouts', JSON.stringify(workouts));
-            renderWorkouts();
+        workoutForm.reset();
+        setsContainer.innerHTML = `
+            <div class="set-row">
+                <span style="font-size:0.85rem; width:40px;">Set 1:</span>
+                <input type="number" placeholder="Weight" class="set-weight" required>
+                <input type="number" placeholder="Reps" class="set-reps" required>
+            </div>
+        `;
+        
+        updateUI();
+    });
+
+    // Delete Log item
+    async function deleteWorkout(id) {
+        await db.workouts.delete(id);
+        updateUI();
+    }
+
+    // Build & Highlight the Calendar
+    async function renderCalendar() {
+        const grid = document.getElementById('calendarGrid');
+        const monthLabel = document.getElementById('calendarMonth');
+        grid.innerHTML = '';
+
+        const year = currentMonthDate.getFullYear();
+        const month = currentMonthDate.getMonth();
+        
+        monthLabel.innerText = currentMonthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+        const daysOfWeek = ['S','M','T','W','T','F','S'];
+        daysOfWeek.forEach(d => {
+            const el = document.createElement('div');
+            el.className = 'cal-header';
+            el.innerText = d;
+            grid.appendChild(el);
+        });
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const totalDays = new Date(year, month + 1, 0).getDate();
+
+        // Get all logged dates for this month to display markers
+        const monthlyWorkouts = await db.workouts.toArray();
+        const loggedDates = new Set(monthlyWorkouts.map(w => w.date));
+
+        for(let i=0; i<firstDay; i++) {
+            grid.appendChild(document.createElement('div'));
         }
 
-        // Initial render on page load
-        renderWorkouts();
-    </script>
+        for(let day=1; day<=totalDays; day++) {
+            const dayEl = document.createElement('div');
+            dayEl.className = 'cal-day';
+            dayEl.innerText = day;
+            
+            const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            
+            if(loggedDates.has(dateStr)) dayEl.classList.add('has-workout');
+            if(dateStr === selectedDate) dayEl.classList.add('active');
+
+            dayEl.onclick = () => {
+                selectedDate = dateStr;
+                selectedDateText.innerText = new Date(dateStr).toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
+                updateUI();
+            };
+
+            grid.appendChild(dayEl);
+        }
+    }
+
+    // Load History list for Selected Day
+    async function renderHistory() {
+        historyList.innerHTML = '';
+        const dayLogs = await db.workouts.where('date').equals(selectedDate).toArray();
+
+        if(dayLogs.length === 0) {
+            historyList.innerHTML = '<div style="color:var(--text-muted); font-style:italic;">No workouts logged for this day.</div>';
+            return;
+        }
+
+        dayLogs.forEach(log => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            
+            const setDetails = log.sets.map((s, i) => `S${i+1}: ${s.weight}kg x ${s.reps}`).join(' | ');
+            
+            item.innerHTML = `
+                <div>
+                    <strong>${log.exercise}</strong>
+                    <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">${setDetails}</div>
+                </div>
+                <button class="del-item" onclick="deleteWorkout(${log.id})">Delete</button>
+            `;
+            historyList.appendChild(item);
+        });
+    }
+
+    // Refresh state and elements
+    async function updateUI() {
+        await renderCalendar();
+        await renderHistory();
+    }
+
+    // Initial configuration load on startup
+    async function initializeApp() {
+        const storedTheme = await db.settings.get('theme');
+        if (storedTheme) {
+            currentTheme = storedTheme.value;
+            document.documentElement.setAttribute('data-theme', currentTheme);
+        }
+        
+        const storedPT = await db.settings.get('ptSessions');
+        if(storedPT) {
+            ptSessions = storedPT.value;
+            document.getElementById('ptCount').innerText = `${ptSessions} / 12`;
+        }
+
+        selectedDateText.innerText = new Date().toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
+        updateUI();
+    }
+
+    initializeApp();
+</script>
+
 </body>
 </html>
