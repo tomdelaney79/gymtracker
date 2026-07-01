@@ -82,17 +82,14 @@
 
         h2 { margin-top: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 8px;}
 
-        /* Form styling */
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 6px; font-size: 0.875rem; font-weight: 500; }
         input, select { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text-color); box-sizing: border-box; font-size: 1rem; }
         
-        /* Suggestions Chips */
         .suggestion-box { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
         .chip { background: var(--bg-color); border: 1px solid var(--border); color: var(--text-color); padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; transition: all 0.1s; }
         .chip:hover { border-color: var(--primary); background: var(--primary); color: white;}
 
-        /* Dynamic PR/History Badge */
         .history-badge { background: var(--highlight); color: var(--highlight-text); padding: 8px 12px; border-radius: 8px; font-size: 0.875rem; margin-bottom: 15px; font-weight: 500; display: none; border: 1px solid var(--border); }
         
         .set-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
@@ -101,13 +98,11 @@
         .btn:hover { background: var(--primary-hover); }
         .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text-color); margin-bottom: 10px; padding: 8px;}
 
-        /* PT Tracker Counter */
         .pt-tracker { display: flex; justify-content: space-between; align-items: center; }
         .pt-badge { background: var(--accent); color: white; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 1.1rem; }
         .counter-controls { display: flex; gap: 8px; }
         .btn-sm { width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
 
-        /* Calendar Styling */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; margin-top: 10px;}
         .cal-header { font-weight: bold; font-size: 0.75rem; color: var(--text-muted); }
         .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 0.875rem; border-radius: 6px; cursor: pointer; border: 1px solid transparent; }
@@ -115,7 +110,6 @@
         .cal-day.has-workout { background: rgba(59, 130, 246, 0.2); border-color: var(--primary); font-weight: bold; }
         .cal-day.active { background: var(--primary); color: white; }
 
-        /* Log History List */
         .history-list { margin-top: 15px; max-height: 300px; overflow-y: auto; }
         .history-item { padding: 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
         .history-item:last-child { border-bottom: none; }
@@ -161,7 +155,7 @@
                             <option value="Arms">Arms</option>
                             <option value="Back">Back</option>
                             <option value="Legs">Legs</option>
-                            <option value="Abs">Abs</option>
+                            <option value="Ab Challenge">🔥 Ab Challenge</option>
                         </select>
                     </div>
 
@@ -215,30 +209,28 @@
 </div>
 
 <script>
-    // Config: Exercises Mapping Data
+    // Configuration Data Matrix
     const exercisesMap = {
         "Shoulders": ["Overhead Barbell Press", "Dumbbell Shoulder Press", "Lateral Raises", "Front Raises", "Rear Delt Flyes"],
         "Chest": ["Chest Press Dumbbell", "Chest Press Barbell", "Incline Dumbbell Press", "Cable Crossover", "Chest Dips"],
         "Arms": ["Bicep Curl Dumbbell", "Bicep Curl Barbell", "Tricep Pushdowns", "Hammer Curls", "Skull Crushers"],
         "Back": ["Barbell Rows", "Dumbbell Single-Arm Row", "Lat Pulldowns", "Pull-ups", "Deadlifts"],
         "Legs": ["Barbell Squats", "Leg Press", "Romanian Deadlifts", "Leg Curls", "Calf Raises"],
-        "Abs": ["Plank", "Hanging Leg Raises", "Ab Wheel Rollouts", "Cable Crunches"]
+        "Ab Challenge": ["Plank (Seconds)", "Hanging Leg Raises", "Ab Wheel Rollouts", "Cable Crunches", "Russian Twists"]
     };
 
-    // Initialize Database via Dexie
+    // Initialize Dexie Storage Model
     const db = new Dexie("GymTrackerDB");
     db.version(2).stores({
         workouts: '++id, date, area, exercise, sets',
         settings: 'key, value'
     });
 
-    // Local Variables
     let currentTheme = 'light';
     let ptSessions = 0;
     let selectedDate = new Date().toISOString().split('T')[0];
     const currentMonthDate = new Date();
 
-    // DOM selectors
     const themeToggle = document.getElementById('themeToggle');
     const workoutForm = document.getElementById('workoutForm');
     const muscleAreaSelect = document.getElementById('muscleArea');
@@ -249,14 +241,13 @@
     const historyList = document.getElementById('historyList');
     const selectedDateText = document.getElementById('selectedDateText');
 
-    // Theme Switch
     themeToggle.addEventListener('click', () => {
         currentTheme = currentTheme === 'light' ? 'dark' : 'light';
         document.documentElement.setAttribute('data-theme', currentTheme);
         db.settings.put({key: 'theme', value: currentTheme});
     });
 
-    // Process Dropdown Cascade Changes
+    // Dropdown updates
     muscleAreaSelect.addEventListener('change', (e) => {
         const selectedArea = e.target.value;
         exerciseSelect.innerHTML = '<option value="">-- Choose Exercise --</option>';
@@ -268,14 +259,14 @@
                 const opt = document.createElement('option');
                 opt.value = ex;
                 opt.textContent = ex;
-                grid=exerciseSelect.appendChild(opt);
+                exerciseSelect.appendChild(opt);
             });
         } else {
             exerciseSelect.disabled = true;
         }
     });
 
-    // Check last weight when choosing an exercise
+    // Handle Historical Weight Lookups
     exerciseSelect.addEventListener('change', async (e) => {
         const currentExercise = e.target.value;
         if (!currentExercise) {
@@ -283,7 +274,6 @@
             return;
         }
 
-        // Search records sorted descending by ID to find the newest past log
         const pastLogs = await db.workouts.where('exercise').equals(currentExercise).reverse().toArray();
         
         if (pastLogs.length > 0) {
@@ -292,7 +282,7 @@
             lastRecordedBox.innerHTML = `⏮️ <strong>Last Performance (${lastLog.date}):</strong><br>${setString}`;
             lastRecordedBox.style.display = 'block';
 
-            // Auto-fill weights input rows with last used weights to streamline progression tracking
+            // Auto-fill target inputs using preceding data sets
             const weightInputs = document.querySelectorAll('.set-weight');
             lastLog.sets.forEach((set, i) => {
                 if(weightInputs[i]) weightInputs[i].value = set.weight;
@@ -303,7 +293,6 @@
         }
     });
 
-    // Layout generators: Set Target Configuration Multipliers
     function setPresetSets(num) {
         setsContainer.innerHTML = '';
         for (let i = 1; i <= num; i++) {
@@ -316,17 +305,13 @@
             `;
             setsContainer.appendChild(setRow);
         }
-        // Force refresh past weight values if exercise is already selected
         exerciseSelect.dispatchEvent(new Event('change'));
     }
 
-    // Helper: Fill standard target suggestions down the columns
     function fillSuggestedReps(count) {
-        const repInputs = document.querySelectorAll('.set-reps');
-        repInputs.forEach(input => input.value = count);
+        document.querySelectorAll('.set-reps').forEach(input => input.value = count);
     }
 
-    // Manual Set insertion Add row button click
     addSetBtn.addEventListener('click', () => {
         const nextIdx = setsContainer.children.length + 1;
         const setRow = document.createElement('div');
@@ -339,17 +324,138 @@
         setsContainer.appendChild(setRow);
     });
 
-    // Adjust global PT target value increments
     async function adjustPT(amount) {
         ptSessions = Math.max(0, Math.min(12, ptSessions + amount));
         document.getElementById('ptCount').innerText = `${ptSessions} / 12`;
         await db.settings.put({key: 'ptSessions', value: ptSessions});
     }
 
-    // Submit log payload logic processing
     workoutForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const area = muscleAreaSelect.value;
         const exercise = exerciseSelect.value;
-        const weights = Array.from(document.querySelectorAll('.set-weight')).map(el => el
+        const weights = Array.from(document.querySelectorAll('.set-weight')).map(el => el.value);
+        const reps = Array.from(document.querySelectorAll('.set-reps')).map(el => el.value);
+        
+        const sets = weights.map((w, i) => ({ weight: w, reps: reps[i] }));
+
+        await db.workouts.add({
+            date: selectedDate,
+            area: area,
+            exercise: exercise,
+            sets: sets
+        });
+
+        workoutForm.reset();
+        exerciseSelect.disabled = true;
+        lastRecordedBox.style.display = 'none';
+        setPresetSets(1);
+        
+        updateUI();
+    });
+
+    async function deleteWorkout(id) {
+        await db.workouts.delete(id);
+        updateUI();
+    }
+
+    async function renderCalendar() {
+        const grid = document.getElementById('calendarGrid');
+        const monthLabel = document.getElementById('calendarMonth');
+        grid.innerHTML = '';
+
+        const year = currentMonthDate.getFullYear();
+        const month = currentMonthDate.getMonth();
+        
+        monthLabel.innerText = currentMonthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+        ['S','M','T','W','T','F','S'].forEach(d => {
+            const el = document.createElement('div');
+            el.className = 'cal-header';
+            el.innerText = d;
+            grid.appendChild(el);
+        });
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const totalDays = new Date(year, month + 1, 0).getDate();
+
+        const monthlyWorkouts = await db.workouts.toArray();
+        const loggedDates = new Set(monthlyWorkouts.map(w => w.date));
+
+        for(let i=0; i<firstDay; i++) {
+            grid.appendChild(document.createElement('div'));
+        }
+
+        for(let day=1; day<=totalDays; day++) {
+            const dayEl = document.createElement('div');
+            dayEl.className = 'cal-day';
+            dayEl.innerText = day;
+            
+            const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            
+            if(loggedDates.has(dateStr)) dayEl.classList.add('has-workout');
+            if(dateStr === selectedDate) dayEl.classList.add('active');
+
+            dayEl.onclick = () => {
+                selectedDate = dateStr;
+                selectedDateText.innerText = new Date(dateStr).toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
+                updateUI();
+            };
+
+            grid.appendChild(dayEl);
+        }
+    }
+
+    async function renderHistory() {
+        historyList.innerHTML = '';
+        const dayLogs = await db.workouts.where('date').equals(selectedDate).toArray();
+
+        if(dayLogs.length === 0) {
+            historyList.innerHTML = '<div style="color:var(--text-muted); font-style:italic;">No logs found for this selected day.</div>';
+            return;
+        }
+
+        dayLogs.forEach(log => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            const setDetails = log.sets.map((s, i) => `S${i+1}: ${s.weight}kg x ${s.reps}`).join(' | ');
+            
+            item.innerHTML = `
+                <div>
+                    <span style="font-size:0.75rem; font-weight:bold; text-transform:uppercase; color:var(--primary)">${log.area || 'Workout'}</span>
+                    <br><strong>${log.exercise}</strong>
+                    <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">${setDetails}</div>
+                </div>
+                <button class="del-item" onclick="deleteWorkout(${log.id})">Delete</button>
+            `;
+            historyList.appendChild(item);
+        });
+    }
+
+    async function updateUI() {
+        await renderCalendar();
+        await renderHistory();
+    }
+
+    async function initializeApp() {
+        const storedTheme = await db.settings.get('theme');
+        if (storedTheme) {
+            currentTheme = storedTheme.value;
+            document.documentElement.setAttribute('data-theme', currentTheme);
+        }
+        
+        const storedPT = await db.settings.get('ptSessions');
+        if(storedPT) {
+            ptSessions = storedPT.value;
+            document.getElementById('ptCount').innerText = `${ptSessions} / 12`;
+        }
+
+        selectedDateText.innerText = new Date().toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
+        updateUI();
+    }
+
+    initializeApp();
+</script>
+</body>
+</html>
