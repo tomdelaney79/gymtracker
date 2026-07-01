@@ -174,7 +174,8 @@
 </div>
 
 <script>
-    const GOOGLE_SHEET_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzxKTVp-lPHkUtfpC-xR9VNI9ymsvYp9zSqwrrMRIp_WXjjW_nv4WKuNdhnUYxinoDbpw/exec";
+    // Configured secure Apps Script target endpoint
+    const GOOGLE_SHEET_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwGrCgTjhulnnIt-ysBhJ_kwBfus7oRsfGEukBvtj5H8UtkC3bOupPVBbANGDZLb83bVQ/exec";
 
     const muscleMatrix = {
         "Shoulders": [
@@ -233,7 +234,7 @@
 
     async function pullCloudRecords() {
         try {
-            syncIndicator.innerText = "⏳ Fetching history directly from Google Sheet...";
+            syncIndicator.innerText = "⏳ Fetching metrics directly from Google Sheet...";
             const res = await fetch(GOOGLE_SHEET_SCRIPT_URL);
             globalCloudLogsCache = await res.json();
             
@@ -247,7 +248,7 @@
             populateAnalyticsDropdown();
         } catch (e) {
             console.error(e);
-            syncIndicator.innerText = "❌ Network Sync Failed. Check Web App configuration.";
+            syncIndicator.innerText = "❌ Connection stalled. Check deployment configuration.";
         }
     }
 
@@ -350,7 +351,6 @@
         const spec = muscleMatrix[area].find(e => e.name === exercise);
         const targetReps = spec ? spec.reps : "10-12";
 
-        // Stack locally in the active runtime variable
         sessionStagingStack.push({
             area: area,
             exercise: exercise,
@@ -360,11 +360,10 @@
 
         document.getElementById('stagedCount').innerText = `${sessionStagingStack.length} Stacked`;
         
-        // Reset row input layout completely back to blank status
         exerciseSelect.selectedIndex = 0;
         containerSets.innerHTML = '';
         stageExerciseBtn.disabled = true;
-        syncIndicator.innerText = `⏳ Staged "${exercise}". Ready to load next movement or push complete block.`;
+        syncIndicator.innerText = `⏳ Staged "${exercise}". Ready to log next movement.`;
     }
 
     async function commitFullSessionToCloud() {
@@ -374,15 +373,13 @@
         }
 
         const todayStr = new Date().toISOString().split('T')[0];
-        syncIndicator.innerText = `⏳ Dispatching multi-line deployment stack to cloud engine...`;
+        syncIndicator.innerText = `⏳ Syncing total session to Google Sheet cloud...`;
         
         try {
-            // Process sequential network dispatches for the bundled routine
             for (let stagedRecord of sessionStagingStack) {
                 await fetch(GOOGLE_SHEET_SCRIPT_URL, {
                     method: "POST",
-                    mode: "no-cors",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "Content-Type": "text/plain;charset=utf-8" }, 
                     body: JSON.stringify({
                         date: todayStr,
                         area: stagedRecord.area,
@@ -395,7 +392,6 @@
 
             syncIndicator.innerText = "✅ Complete session synchronized successfully!";
             
-            // Wipe runtime structural buffers
             sessionStagingStack = [];
             document.getElementById('stagedCount').innerText = "0 Stacked";
             areaSelect.selectedIndex = 0;
@@ -406,7 +402,7 @@
             await pullCloudRecords();
         } catch(err) {
             console.error(err);
-            syncIndicator.innerText = "❌ Write transmission failed. Verify endpoint credentials.";
+            syncIndicator.innerText = "❌ Transmission broken. Verify script deployment access configuration.";
         }
     }
 
