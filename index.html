@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Gym Tracker & PT Dashboard</title>
+    <title>Dynamic Gym Tracker & PT Dashboard</title>
     <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.js"></script>
     <style>
         :root {
@@ -16,6 +16,8 @@
             --border: #e2e8f0;
             --accent: #10b981;
             --danger: #ef4444;
+            --highlight: #fef08a;
+            --highlight-text: #854d0e;
         }
 
         [data-theme="dark"] {
@@ -26,6 +28,8 @@
             --primary: #3b82f6;
             --primary-hover: #60a5fa;
             --border: #334155;
+            --highlight: #422006;
+            --highlight-text: #fef08a;
         }
 
         body {
@@ -79,15 +83,23 @@
         h2 { margin-top: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 8px;}
 
         /* Form styling */
-        .form-group { margin-bottom: 12px; }
-        label { display: block; margin-bottom: 4px; font-size: 0.875rem; font-weight: 500; }
-        input, select { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text-color); box-sizing: border-box; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 6px; font-size: 0.875rem; font-weight: 500; }
+        input, select { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text-color); box-sizing: border-box; font-size: 1rem; }
+        
+        /* Suggestions Chips */
+        .suggestion-box { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+        .chip { background: var(--bg-color); border: 1px solid var(--border); color: var(--text-color); padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; transition: all 0.1s; }
+        .chip:hover { border-color: var(--primary); background: var(--primary); color: white;}
+
+        /* Dynamic PR/History Badge */
+        .history-badge { background: var(--highlight); color: var(--highlight-text); padding: 8px 12px; border-radius: 8px; font-size: 0.875rem; margin-bottom: 15px; font-weight: 500; display: none; border: 1px solid var(--border); }
         
         .set-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
         
-        .btn { background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; width: 100%; text-align: center;}
+        .btn { background: var(--primary); color: white; border: none; padding: 12px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%; text-align: center; font-size: 1rem;}
         .btn:hover { background: var(--primary-hover); }
-        .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text-color); margin-bottom: 10px;}
+        .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text-color); margin-bottom: 10px; padding: 8px;}
 
         /* PT Tracker Counter */
         .pt-tracker { display: flex; justify-content: space-between; align-items: center; }
@@ -119,7 +131,7 @@
     </header>
 
     <div class="grid">
-        <div class="space-y">
+        <div>
             <div class="card" style="margin-bottom: 20px;">
                 <h2>🎯 Personal Training Block</h2>
                 <div class="pt-tracker">
@@ -136,22 +148,53 @@
 
             <div class="card">
                 <h2>📝 Log Exercise</h2>
+                
+                <div class="history-badge" id="lastRecordedBox"></div>
+
                 <form id="workoutForm">
                     <div class="form-group">
-                        <label for="exerciseName">Exercise</label>
-                        <input type="text" id="exerciseName" placeholder="e.g., Squats, Bench Press" required>
+                        <label for="muscleArea">Target Area</label>
+                        <select id="muscleArea" required>
+                            <option value="">-- Choose Muscle Group --</option>
+                            <option value="Shoulders">Shoulders</option>
+                            <option value="Chest">Chest</option>
+                            <option value="Arms">Arms</option>
+                            <option value="Back">Back</option>
+                            <option value="Legs">Legs</option>
+                            <option value="Abs">Abs</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="exerciseSelect">Exercise</label>
+                        <select id="exerciseSelect" required disabled>
+                            <option value="">-- Select Target Area First --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Suggested Configurations</label>
+                        <div class="suggestion-box">
+                            <button type="button" class="chip" onclick="setPresetSets(3)">x3 Sets</button>
+                            <button type="button" class="chip" onclick="setPresetSets(4)">x4 Sets</button>
+                            <span style="border-left: 1px solid var(--border); margin: 0 4px;"></span>
+                            <button type="button" class="chip" onclick="fillSuggestedReps(6)">6 Reps</button>
+                            <button type="button" class="chip" onclick="fillSuggestedReps(8)">8 Reps</button>
+                            <button type="button" class="chip" onclick="fillSuggestedReps(10)">10 Reps</button>
+                            <button type="button" class="chip" onclick="fillSuggestedReps(12)">12 Reps</button>
+                        </div>
                     </div>
                     
-                    <label>Sets Configuration</label>
+                    <label>Sets Logs</label>
                     <div id="setsContainer">
                         <div class="set-row">
                             <span style="font-size:0.85rem; width:40px;">Set 1:</span>
-                            <input type="number" placeholder="Weight" class="set-weight" required>
+                            <input type="number" placeholder="Weight (kg)" class="set-weight" required step="any">
                             <input type="number" placeholder="Reps" class="set-reps" required>
                         </div>
                     </div>
                     
-                    <button type="button" class="btn btn-secondary" id="addSetBtn">+ Add Set</button>
+                    <button type="button" class="btn btn-secondary" id="addSetBtn">+ Add Custom Set</button>
                     <button type="submit" class="btn">Save Workout</button>
                 </form>
             </div>
@@ -172,191 +215,141 @@
 </div>
 
 <script>
-    // Initialize Database via Dexie (Persistent local storage)
+    // Config: Exercises Mapping Data
+    const exercisesMap = {
+        "Shoulders": ["Overhead Barbell Press", "Dumbbell Shoulder Press", "Lateral Raises", "Front Raises", "Rear Delt Flyes"],
+        "Chest": ["Chest Press Dumbbell", "Chest Press Barbell", "Incline Dumbbell Press", "Cable Crossover", "Chest Dips"],
+        "Arms": ["Bicep Curl Dumbbell", "Bicep Curl Barbell", "Tricep Pushdowns", "Hammer Curls", "Skull Crushers"],
+        "Back": ["Barbell Rows", "Dumbbell Single-Arm Row", "Lat Pulldowns", "Pull-ups", "Deadlifts"],
+        "Legs": ["Barbell Squats", "Leg Press", "Romanian Deadlifts", "Leg Curls", "Calf Raises"],
+        "Abs": ["Plank", "Hanging Leg Raises", "Ab Wheel Rollouts", "Cable Crunches"]
+    };
+
+    // Initialize Database via Dexie
     const db = new Dexie("GymTrackerDB");
-    db.version(1).stores({
-        workouts: '++id, date, exercise, sets',
+    db.version(2).stores({
+        workouts: '++id, date, area, exercise, sets',
         settings: 'key, value'
     });
 
-    // App State Variables
+    // Local Variables
     let currentTheme = 'light';
     let ptSessions = 0;
     let selectedDate = new Date().toISOString().split('T')[0];
     const currentMonthDate = new Date();
 
-    // DOM Elements
+    // DOM selectors
     const themeToggle = document.getElementById('themeToggle');
     const workoutForm = document.getElementById('workoutForm');
+    const muscleAreaSelect = document.getElementById('muscleArea');
+    const exerciseSelect = document.getElementById('exerciseSelect');
+    const lastRecordedBox = document.getElementById('lastRecordedBox');
     const setsContainer = document.getElementById('setsContainer');
     const addSetBtn = document.getElementById('addSetBtn');
     const historyList = document.getElementById('historyList');
     const selectedDateText = document.getElementById('selectedDateText');
 
-    // UI: Dark/Light Theme Switching
+    // Theme Switch
     themeToggle.addEventListener('click', () => {
         currentTheme = currentTheme === 'light' ? 'dark' : 'light';
         document.documentElement.setAttribute('data-theme', currentTheme);
         db.settings.put({key: 'theme', value: currentTheme});
     });
 
-    // UI: Multi-set Generator
+    // Process Dropdown Cascade Changes
+    muscleAreaSelect.addEventListener('change', (e) => {
+        const selectedArea = e.target.value;
+        exerciseSelect.innerHTML = '<option value="">-- Choose Exercise --</option>';
+        lastRecordedBox.style.display = 'none';
+
+        if (selectedArea && exercisesMap[selectedArea]) {
+            exerciseSelect.disabled = false;
+            exercisesMap[selectedArea].forEach(ex => {
+                const opt = document.createElement('option');
+                opt.value = ex;
+                opt.textContent = ex;
+                grid=exerciseSelect.appendChild(opt);
+            });
+        } else {
+            exerciseSelect.disabled = true;
+        }
+    });
+
+    // Check last weight when choosing an exercise
+    exerciseSelect.addEventListener('change', async (e) => {
+        const currentExercise = e.target.value;
+        if (!currentExercise) {
+            lastRecordedBox.style.display = 'none';
+            return;
+        }
+
+        // Search records sorted descending by ID to find the newest past log
+        const pastLogs = await db.workouts.where('exercise').equals(currentExercise).reverse().toArray();
+        
+        if (pastLogs.length > 0) {
+            const lastLog = pastLogs[0];
+            const setString = lastLog.sets.map((s, i) => `S${i+1}: ${s.weight}kg x ${s.reps}`).join(' | ');
+            lastRecordedBox.innerHTML = `⏮️ <strong>Last Performance (${lastLog.date}):</strong><br>${setString}`;
+            lastRecordedBox.style.display = 'block';
+
+            // Auto-fill weights input rows with last used weights to streamline progression tracking
+            const weightInputs = document.querySelectorAll('.set-weight');
+            lastLog.sets.forEach((set, i) => {
+                if(weightInputs[i]) weightInputs[i].value = set.weight;
+            });
+        } else {
+            lastRecordedBox.innerHTML = `ℹ️ No previous log found for this exercise.`;
+            lastRecordedBox.style.display = 'block';
+        }
+    });
+
+    // Layout generators: Set Target Configuration Multipliers
+    function setPresetSets(num) {
+        setsContainer.innerHTML = '';
+        for (let i = 1; i <= num; i++) {
+            const setRow = document.createElement('div');
+            setRow.className = 'set-row';
+            setRow.innerHTML = `
+                <span style="font-size:0.85rem; width:40px;">Set ${i}:</span>
+                <input type="number" placeholder="Weight (kg)" class="set-weight" required step="any">
+                <input type="number" placeholder="Reps" class="set-reps" required>
+            `;
+            setsContainer.appendChild(setRow);
+        }
+        // Force refresh past weight values if exercise is already selected
+        exerciseSelect.dispatchEvent(new Event('change'));
+    }
+
+    // Helper: Fill standard target suggestions down the columns
+    function fillSuggestedReps(count) {
+        const repInputs = document.querySelectorAll('.set-reps');
+        repInputs.forEach(input => input.value = count);
+    }
+
+    // Manual Set insertion Add row button click
     addSetBtn.addEventListener('click', () => {
-        const setCode = setsContainer.children.length + 1;
+        const nextIdx = setsContainer.children.length + 1;
         const setRow = document.createElement('div');
         setRow.className = 'set-row';
         setRow.innerHTML = `
-            <span style="font-size:0.85rem; width:40px;">Set ${setCode}:</span>
-            <input type="number" placeholder="Weight" class="set-weight" required>
+            <span style="font-size:0.85rem; width:40px;">Set ${nextIdx}:</span>
+            <input type="number" placeholder="Weight (kg)" class="set-weight" required step="any">
             <input type="number" placeholder="Reps" class="set-reps" required>
         `;
         setsContainer.appendChild(setRow);
     });
 
-    // Data: Adjust PT Counter (Max 12)
+    // Adjust global PT target value increments
     async function adjustPT(amount) {
         ptSessions = Math.max(0, Math.min(12, ptSessions + amount));
         document.getElementById('ptCount').innerText = `${ptSessions} / 12`;
         await db.settings.put({key: 'ptSessions', value: ptSessions});
     }
 
-    // Form submission processing
+    // Submit log payload logic processing
     workoutForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const exercise = document.getElementById('exerciseName').value;
-        const weights = Array.from(document.querySelectorAll('.set-weight')).map(el => el.value);
-        const reps = Array.from(document.querySelectorAll('.set-reps')).map(el => el.value);
-        
-        const sets = weights.map((w, i) => ({ weight: w, reps: reps[i] }));
-
-        await db.workouts.add({
-            date: selectedDate,
-            exercise: exercise,
-            sets: sets
-        });
-
-        workoutForm.reset();
-        setsContainer.innerHTML = `
-            <div class="set-row">
-                <span style="font-size:0.85rem; width:40px;">Set 1:</span>
-                <input type="number" placeholder="Weight" class="set-weight" required>
-                <input type="number" placeholder="Reps" class="set-reps" required>
-            </div>
-        `;
-        
-        updateUI();
-    });
-
-    // Delete Log item
-    async function deleteWorkout(id) {
-        await db.workouts.delete(id);
-        updateUI();
-    }
-
-    // Build & Highlight the Calendar
-    async function renderCalendar() {
-        const grid = document.getElementById('calendarGrid');
-        const monthLabel = document.getElementById('calendarMonth');
-        grid.innerHTML = '';
-
-        const year = currentMonthDate.getFullYear();
-        const month = currentMonthDate.getMonth();
-        
-        monthLabel.innerText = currentMonthDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-
-        const daysOfWeek = ['S','M','T','W','T','F','S'];
-        daysOfWeek.forEach(d => {
-            const el = document.createElement('div');
-            el.className = 'cal-header';
-            el.innerText = d;
-            grid.appendChild(el);
-        });
-
-        const firstDay = new Date(year, month, 1).getDay();
-        const totalDays = new Date(year, month + 1, 0).getDate();
-
-        // Get all logged dates for this month to display markers
-        const monthlyWorkouts = await db.workouts.toArray();
-        const loggedDates = new Set(monthlyWorkouts.map(w => w.date));
-
-        for(let i=0; i<firstDay; i++) {
-            grid.appendChild(document.createElement('div'));
-        }
-
-        for(let day=1; day<=totalDays; day++) {
-            const dayEl = document.createElement('div');
-            dayEl.className = 'cal-day';
-            dayEl.innerText = day;
-            
-            const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            
-            if(loggedDates.has(dateStr)) dayEl.classList.add('has-workout');
-            if(dateStr === selectedDate) dayEl.classList.add('active');
-
-            dayEl.onclick = () => {
-                selectedDate = dateStr;
-                selectedDateText.innerText = new Date(dateStr).toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
-                updateUI();
-            };
-
-            grid.appendChild(dayEl);
-        }
-    }
-
-    // Load History list for Selected Day
-    async function renderHistory() {
-        historyList.innerHTML = '';
-        const dayLogs = await db.workouts.where('date').equals(selectedDate).toArray();
-
-        if(dayLogs.length === 0) {
-            historyList.innerHTML = '<div style="color:var(--text-muted); font-style:italic;">No workouts logged for this day.</div>';
-            return;
-        }
-
-        dayLogs.forEach(log => {
-            const item = document.createElement('div');
-            item.className = 'history-item';
-            
-            const setDetails = log.sets.map((s, i) => `S${i+1}: ${s.weight}kg x ${s.reps}`).join(' | ');
-            
-            item.innerHTML = `
-                <div>
-                    <strong>${log.exercise}</strong>
-                    <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">${setDetails}</div>
-                </div>
-                <button class="del-item" onclick="deleteWorkout(${log.id})">Delete</button>
-            `;
-            historyList.appendChild(item);
-        });
-    }
-
-    // Refresh state and elements
-    async function updateUI() {
-        await renderCalendar();
-        await renderHistory();
-    }
-
-    // Initial configuration load on startup
-    async function initializeApp() {
-        const storedTheme = await db.settings.get('theme');
-        if (storedTheme) {
-            currentTheme = storedTheme.value;
-            document.documentElement.setAttribute('data-theme', currentTheme);
-        }
-        
-        const storedPT = await db.settings.get('ptSessions');
-        if(storedPT) {
-            ptSessions = storedPT.value;
-            document.getElementById('ptCount').innerText = `${ptSessions} / 12`;
-        }
-
-        selectedDateText.innerText = new Date().toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
-        updateUI();
-    }
-
-    initializeApp();
-</script>
-
-</body>
-</html>
+        const area = muscleAreaSelect.value;
+        const exercise = exerciseSelect.value;
+        const weights = Array.from(document.querySelectorAll('.set-weight')).map(el => el
