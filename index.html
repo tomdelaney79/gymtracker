@@ -445,7 +445,8 @@
 </div>
 
 <script>
-// ══ WORKOUT DATA ══════════════════════════════════════════════════════════════
+<script>
+// 1. ══ WORKOUT DATA ══════════════════════════════════════════════════════════
 const WORKOUTS = {
   "Chest": [
     { id:"ch_1", exercise:"Chest Press (Barbell)", weight:60, sets:3, reps:"8-10",  rest:60 },
@@ -493,7 +494,9 @@ const MOODS  = [
   { id:"bad",  emoji:"😞",label:"Rough", color:"#ef4444" },
 ];
 
-// ══ STATE ═════════════════════════════════════════════════════════════════════
+const FAST_H=16,EAT_H=8,FCIRC=2*Math.PI*75;
+
+// 2. ══ STATE ═════════════════════════════════════════════════════════════════
 function load(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } }
 function save(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
 
@@ -506,13 +509,12 @@ let activeFast   = load("ght2_active_fast", null);
 let fasts        = load("ght2_fasts", []);
 let sheetsURL    = load("ght2_sheets_url", "");
 
-let currentSession = null; // { day, startTime }
+let currentSession = null;
 let activeWorkoutDay = null;
 let expandedCard = null;
 let histExpanded = null;
 let fastInterval = null;
 
-// Rest timer
 let restTimerInterval = null;
 let restRemaining = 0;
 let restExName = "";
@@ -522,17 +524,7 @@ function sessionKey(day){ return day+"_"+todayISO(); }
 function dayChecked(day){ return checked[sessionKey(day)]||{}; }
 function dayMoods(day){ return moods[sessionKey(day)]||{}; }
 
-// ══ INIT ══════════════════════════════════════════════════════════════════════
-const todayName = new Date().toLocaleDateString("en-GB",{weekday:"long"});
-document.getElementById("home-date").textContent =
-  new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
-document.getElementById("today-label").textContent = "TODAY · "+todayName.toUpperCase();
-if(sheetsURL) document.getElementById("sheets-url").value = sheetsURL;
-updateHomeStats();
-if(activeFast) startFastTimer(); else resetFastUI();
-renderFastHistory();
-
-// ══ HOME ══════════════════════════════════════════════════════════════════════
+// 3. ══ HOME FUNCTIONS ════════════════════════════════════════════════════════
 function updateHomeStats(){
   const last = sessionLog[0];
   document.getElementById("hs-last-day").textContent  = last ? last.day : "—";
@@ -559,7 +551,6 @@ function startSession(){
   currentSession = { day: homeSelectedDay, startTime: Date.now() };
   activeWorkoutDay = homeSelectedDay;
 
-  // Clear today's checks for a fresh session
   const key = sessionKey(homeSelectedDay);
   checked[key] = {};
   moods[key] = {};
@@ -572,13 +563,12 @@ function startSession(){
   document.getElementById("app-session-label").textContent =
     new Date().toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
 
-  // Highlight correct day tab in workout
   selectWorkoutDay(homeSelectedDay);
   switchTab("workout");
   updateProgressBar();
 }
 
-// ══ APP TABS ══════════════════════════════════════════════════════════════════
+// 4. ══ APP TABS ══════════════════════════════════════════════════════════════
 function switchTab(name){
   document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
   document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
@@ -589,7 +579,7 @@ function switchTab(name){
   if(name==="fasting")  renderFastHistory();
 }
 
-// ══ WORKOUT ═══════════════════════════════════════════════════════════════════
+// 5. ══ WORKOUT ═══════════════════════════════════════════════════════════════
 function selectWorkoutDay(day){
   activeWorkoutDay = day;
   expandedCard = null;
@@ -747,7 +737,7 @@ function cancelWeight(id){
   document.getElementById("winput-"+id).classList.remove("show");
 }
 
-// ══ REST TIMER ════════════════════════════════════════════════════════════════
+// 6. ══ REST TIMER ════════════════════════════════════════════════════════════
 function startRestTimer(seconds, exName, exId){
   clearInterval(restTimerInterval);
   restRemaining = seconds;
@@ -783,7 +773,7 @@ function skipRest(){
   document.getElementById("rest-overlay").classList.remove("show");
 }
 
-// ══ END SESSION ═══════════════════════════════════════════════════════════════
+// 7. ══ END SESSION ═══════════════════════════════════════════════════════════
 function showEndModal(){
   if(!currentSession) return;
   const day = currentSession.day;
@@ -822,7 +812,6 @@ async function confirmEndSession(){
   sessionLog.unshift(record);
   save("ght2_log", sessionLog);
 
-  // Sync to Google Sheets
   if(sheetsURL){
     document.getElementById("sheets-sync-status").textContent = "📊 Syncing to Google Sheets...";
     const ok = await syncToSheets(record);
@@ -843,7 +832,7 @@ async function confirmEndSession(){
   updateHomeStats();
 }
 
-// ══ GOOGLE SHEETS ════════════════════════════════════════════════════════════
+// 8. ══ GOOGLE SHEETS ════════════════════════════════════════════════════════
 function saveSheetURL(){
   sheetsURL = document.getElementById("sheets-url").value.trim();
   save("ght2_sheets_url", sheetsURL);
@@ -885,7 +874,7 @@ async function syncToSheets(record){
   } catch(e){ return false; }
 }
 
-// ══ HISTORY ═══════════════════════════════════════════════════════════════════
+// 9. ══ HISTORY ═══════════════════════════════════════════════════════════════
 function renderHistory(){
   const list = document.getElementById("history-list");
   if(!sessionLog.length){
@@ -933,7 +922,7 @@ function toggleHist(id){
   renderHistory();
 }
 
-// ══ REMINDERS ════════════════════════════════════════════════════════════════
+// 10. ══ REMINDERS ════════════════════════════════════════════════════════════
 function renderReminders(){
   const last = sessionLog[0];
   document.getElementById("last-session-day").textContent  = last ? last.day : "No sessions yet";
@@ -977,9 +966,7 @@ function removeReminder(id){
   renderReminders();
 }
 
-// ══ FASTING ══════════════════════════════════════════════════════════════════
-const FAST_H=16,EAT_H=8,FCIRC=2*Math.PI*75;
-
+// 11. ══ FASTING ══════════════════════════════════════════════════════════════
 function toggleFast(){
   if(!activeFast){
     activeFast={start:Date.now()};
@@ -1049,6 +1036,17 @@ function renderFastHistory(){
 function calcStreak(){ let s=0; for(const f of fasts){if(f.achieved)s++;else break;} return s; }
 function hms(ms){ const h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),s=Math.floor(ms%60000/1000); return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0"); }
 function ft(d){ return d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}); }
+
+// 12. ══ ACTUAL INIT EXECUTION BLOCK (Now safely at the bottom) ═══════════════
+const todayName = new Date().toLocaleDateString("en-GB",{weekday:"long"});
+document.getElementById("home-date").textContent =
+  new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+document.getElementById("today-label").textContent = "TODAY · "+todayName.toUpperCase();
+if(sheetsURL) document.getElementById("sheets-url").value = sheetsURL;
+
+updateHomeStats();
+if(activeFast) startFastTimer(); else resetFastUI();
+renderFastHistory();
 </script>
 
 <!-- ══ APPS SCRIPT CODE (reference) ══════════════════════════════════════════
