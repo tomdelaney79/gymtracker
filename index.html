@@ -41,7 +41,6 @@
         label { display: block; margin-bottom: 4px; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); }
         input, select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text-color); box-sizing: border-box; font-size: 0.95rem; }
         
-        /* Set Row Adjustments with Weight Suffix Container */
         .set-header-row { display: grid; grid-template-columns: 60px 1.2fr 1fr; gap: 10px; margin-bottom: 5px; font-size: 0.8rem; font-weight: bold; color: var(--text-muted); padding-left: 5px; }
         .set-row { display: grid; grid-template-columns: 60px 1.2fr 1fr; gap: 10px; margin-bottom: 8px; align-items: center; }
         .set-label { font-size: 0.9rem; font-weight: 600; color: var(--text-muted); text-align: center; }
@@ -84,6 +83,7 @@
 
     <div class="main-layout">
         <div>
+            <!-- Weekly PT Goals -->
             <div class="card">
                 <h2>🏆 Weekly Personal Training Block</h2>
                 <div class="medal-box" id="medalCard">
@@ -93,11 +93,12 @@
                     </div>
                     <div style="text-align: right;">
                         <span style="font-size:1.5rem; font-weight:800;" id="weeklyCount">0</span>
-                        <div style="font-size:0.75rem; font-weight:500; color:var(--text-muted)">Sessions Saved</div>
+                        <div style="font-size:0.75rem; font-weight:500; color:var(--text-muted)">Days Trained</div>
                     </div>
                 </div>
             </div>
 
+            <!-- Main Logging System Layout -->
             <div class="card">
                 <h2>📝 Log Workout Set</h2>
                 <div class="sync-status" id="syncIndicator">Data saved locally in high-speed cache</div>
@@ -109,6 +110,8 @@
                             <option value="">-- Choose Muscle Group --</option>
                             <option value="Shoulders">Shoulders</option>
                             <option value="Chest">Chest</option>
+                            <option value="Biceps">Biceps & Back</option>
+                            <option value="Legs">Legs</option>
                         </select>
                     </div>
 
@@ -119,6 +122,7 @@
                         </select>
                     </div>
 
+                    <!-- Dynamic Input Grid Layout -->
                     <div style="margin-top:20px; margin-bottom:15px;">
                         <div class="set-header-row">
                             <div>Set</div>
@@ -126,7 +130,8 @@
                             <div>Reps Executed</div>
                         </div>
                         <div id="dynamicSetsContainer">
-                            </div>
+                            <!-- Injected rows mirror here -->
+                        </div>
                     </div>
 
                     <button type="button" class="btn btn-sec" onclick="appendExtraSetRow()">+ Add Extra Drop/Warmup Set</button>
@@ -136,6 +141,7 @@
         </div>
 
         <div>
+            <!-- Next Session Schedule Assistant -->
             <div class="card">
                 <h2>📅 Next Session Assistant</h2>
                 <div style="font-size: 0.95rem; line-height: 1.5;" id="reminderBox">
@@ -143,6 +149,7 @@
                 </div>
             </div>
 
+            <!-- Visual Progressive Overload Analytics -->
             <div class="card">
                 <h2>📈 Progressive Overload Analytics</h2>
                 <div class="form-group">
@@ -156,6 +163,7 @@
                 </div>
             </div>
 
+            <!-- Daily Activity Ledger -->
             <div class="card">
                 <h2>📋 Today's Saved Logs</h2>
                 <div class="history-list" id="todayLedger">
@@ -188,6 +196,20 @@
             { name: "Pec Fly", weight: "100", sets: 4, reps: "8-12" },
             { name: "Triceps Pushdown", weight: "64", sets: 3, reps: "10-12" },
             { name: "Incline Bench", weight: "40", sets: 3, reps: "8-10" }
+        ],
+        "Biceps": [
+            { name: "Lat Pulldown", weight: "66", sets: 3, reps: "10-12" },
+            { name: "Seated Row", weight: "59", sets: 3, reps: "10-12" },
+            { name: "Biceps Curl", weight: "36", sets: 3, reps: "10-12" },
+            { name: "Hammer curls", weight: "12x2", sets: 3, reps: "10-12" },
+            { name: "45 degree curls", weight: "12x2", sets: 3, reps: "10-12" },
+            { name: "Sevens", weight: "20", sets: 3, reps: "(7x3)" }
+        ],
+        "Legs": [
+            { name: "Leg Press", weight: "86", sets: 4, reps: "10-12" },
+            { name: "Leg Extension", weight: "32", sets: 3, reps: "10-12" },
+            { name: "Hip Adduction", weight: "52", sets: 3, reps: "10-12" },
+            { name: "Seated Leg Curl", weight: "45", sets: 3, reps: "10-12" }
         ]
     };
 
@@ -352,7 +374,7 @@
         } else if (sessionCount === 3) {
             medalBadge.innerHTML = "🥉 Bronze Medal Hit!";
         } else {
-            medalBadge.innerHTML = `⚪ No Medal Yet (${3 - sessionCount} more needed)`;
+            medalBadge.innerHTML = `⚪ No Medal Yet (${3 - sessionCount} days to go)`;
         }
     }
 
@@ -381,7 +403,7 @@
         const reps = Array.from(containerSets.querySelectorAll('.input-reps')).map(i => i.value);
         
         const spec = muscleMatrix[area].find(e => e.name === exercise);
-        const targetReps = spec ? spec.reps : "8-12";
+        const targetReps = spec ? spec.reps : "10-12";
 
         let localPayloadSets = [];
         
