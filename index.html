@@ -234,7 +234,7 @@
 
     async function pullCloudRecords() {
         try {
-            syncIndicator.innerText = "⏳ Fetching metrics directly from Google Sheet...";
+            syncIndicator.innerText = "⏳ Fetching metrics directly from Cloud...";
             
             // Clean text fetch configuration completely clears the browser CORS layout block
             const res = await fetch(GOOGLE_SHEET_SCRIPT_URL, {
