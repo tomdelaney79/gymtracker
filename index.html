@@ -381,7 +381,7 @@
         }
 
         const todayStr = new Date().toISOString().split('T')[0];
-        syncIndicator.innerText = `⏳ Syncing total session to Google Sheet cloud...`;
+        syncIndicator.innerText = `⏳ Syncing total session to cloud...`;
         
         try {
             for (let stagedRecord of sessionStagingStack) {
